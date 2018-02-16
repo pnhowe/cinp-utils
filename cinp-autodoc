@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import logging
+import urllib
+from optparse import OptionParser
+
+from cinp import client
+from cinp.client import NotAuthorized
+
+oparser = OptionParser( description='CInP Auto Documentation', usage='usage %prog [options] <CInP endpoint, ie: http://service/api/v1/ >' )
+
+oparser.add_option( '-p', '--proxy', help='HTTP Proxy', dest='proxy', default=None )
+oparser.add_option( '-f', '--file', help='Target File, - for stdout (default: -)', dest='file', metavar='FILENAME', default='-' )
+oparser.add_option( '-d', '--description', help='API Description (used for the document title)', dest='description', default='' )
+oparser.add_option( '-v', '--verbose', dest='verbose', default=False, action='store_true' )
+
+( options, args ) = oparser.parse_args()
+
+if len( args ) != 1:
+  oparser.error( 'CInP Enpoint required' )
+
+logging.basicConfig()
+logger = logging.getLogger()
+
+if options.verbose:
+  logger.setLevel( logging.DEBUG )
+else:
+  logger.setLevel( logging.INFO )
+
+
+def format_parm( parm ):
+  result = '{0}({1})'.format( parm[ 'name' ], parm[ 'type' ] )
+  try:
+    if parm[ 'required' ]:
+      result += '(Req)'
+  except KeyError:
+    pass
+
+  try:
+    result += ' uri: {0}'.format( parm[ 'uri' ] )
+  except KeyError:
+    pass
+
+  return result
+
+
+def format_field( field ):
+  result = '{0}({1})({2})'.format( field[ 'name' ], field[ 'type' ], field[ 'mode' ] )
+  if field[ 'required' ]:
+    result += '(Req)'
+
+  try:
+    result += ' uri: {0}'.format( field[ 'uri' ] )
+  except KeyError:
+    pass
+
+  try:
+    result += ' - {0}'.format( field[ 'doc' ] )
+  except KeyError:
+    pass
+
+  return result
+
+
+def do_namespace( url, path ):
+  try:
+    item = cinp.describe( url )
+  except NotAuthorized:
+    logging.warning( 'describing namespace "{0}" is not Authorized'.format( url ) )
+    return
+
+  if 'namespaces' not in item:
+    print( 'expected namespace got "{0}"'.format( item ) )
+
+  if item[ 'name' ] is None:  # quite often the root name space does not have a name
+    item[ 'name' ] = '(root)'
+
+  name = '.'.join( path + [ item[ 'name' ] ] )
+  output.write( """
+------------{0}
+Namespace - {1}
+------------{0}
+URL: {2}
+
+API Version: {3}
+
+""".format(
+        '-' * len( name ),
+        name,
+        url,
+        item[ 'api-version' ]
+       ) )
+
+  path = path + [ item[ 'name' ] ]
+
+  for model in item[ 'models' ]:
+    do_model( model )
+
+  for child in item[ 'namespaces' ]:
+    do_namespace( child, path )
+
+
+def do_model( url ):
+  try:
+    item = cinp.describe( url )
+  except NotAuthorized:
+    logging.warning( 'describing model "{0}" is not Authorized'.format( url ) )
+    return
+
+  if 'fields' not in item:
+    print( 'expected model got "{0}"'.format( item ) )
+
+  try:
+    doc = """
+::
+
+  {0}
+
+""".format( item[ 'doc' ].strip().replace( '\n', '\n  ' ) )
+  except KeyError:
+    doc = ''
+
+  constants = []
+  for tmp in item[ 'constants' ]:
+    constants.append( tmp )
+
+  if constants:
+    constants = """Constants
+~~~~~~~~~
+
+::
+
+  - {0}
+""".format( '\n  - '.join( constants ) )
+
+  else:
+    constants = ''
+
+  list_filters = []
+  for tmp in item[ 'list-filters' ]:
+    list_filters.append( '{0} - {1}'.format( tmp, ', '.join( [ format_parm( i ) for i in item[ 'list-filters' ][ tmp ] ] ) ) )
+
+  if list_filters:
+    list_filters = """List Filters
+~~~~~~~~~~~~
+
+::
+
+  - {0}
+""".format( '\n  - '.join( list_filters ) )
+
+  else:
+    list_filters = ''
+
+  fields = []
+  for tmp in item[ 'fields' ]:
+    fields.append( format_field( tmp ) )
+
+  if fields:
+    fields = """Fields
+~~~~~~
+
+::
+
+  - {0}
+""".format( '\n  - '.join( fields ) )
+
+  else:
+    fields = ''
+
+  output.write( """
+Model - {0}
+--------{1}
+
+URL: {2}
+
+{3}
+{4}
+{5}
+{6}
+
+""".format(
+        item[ 'name' ],
+        '-' * len( item[ 'name' ] ),
+        url,
+        doc,
+        constants,
+        list_filters,
+        fields,
+       ) )
+
+  for action in item[ 'actions' ]:
+    do_action( action )
+
+
+def do_action( url ):
+  try:
+    item = cinp.describe( url )
+  except NotAuthorized:
+    logging.warning( 'describing action "{0}" is not Authorized'.format( url ) )
+    return
+
+  if 'paramaters' not in item:
+    print( 'expected action got "{0}"'.format( item ) )
+
+  try:
+    doc = """
+::
+
+  {0}
+
+""".format( item[ 'doc' ].strip().replace( '\n', '\n  ' ) )
+  except KeyError:
+    doc = ''
+
+  try:
+    return_type = format_parm( item[ 'return-type' ] )
+  except KeyError:
+    return_type = None
+
+  paramaters = []
+  for parm in item.get( 'paramater-list', [] ):
+    paramaters.append( format_parm( parm ) )
+
+  if paramaters:
+    paramaters = """Paramaters::
+
+  - {0}
+""".format( '\n  - '.join( paramaters ) )
+
+  else:
+    paramaters = ''
+
+  output.write( """
+Action - {0}
+~~~~~~~~~{1}
+
+URL: {2}
+
+Static: {3}
+
+{4}
+
+Return Type::
+
+  {5}
+
+{6}
+
+""".format(
+        item[ 'name' ],
+        '~' * len( item[ 'name' ] ),
+        url,
+        item[ 'static' ],
+        doc,
+        return_type,
+        paramaters,
+       ) )
+
+
+if options.file == '-':
+  output = sys.stdout
+else:
+  output = open( options.file, 'w' )
+
+try:
+  url = urllib.parse.urlparse( args[0] )
+except ValueError:
+  print( 'Error parsing "{0}"'.format( args[0] ) )
+
+try:
+  cinp = client.CInP( '{0}://{1}'.format( url.scheme, url.hostname ), url.path, url.port if url.port is not None else 80, options.proxy )
+
+  title = 'CInP API Documentation for {0}'.format( options.description )
+
+  output.write( '{0}\n{1}\n{2}\n'.format( '=' * len( title ), title, '=' * len( title ) ) )
+
+  do_namespace( url.path, [] )
+
+  output.write( '\nGenerated by CInP autodoc\n*************************\n' )
+
+except Exception as e:
+  output.close()
+  print( 'Error "{0}", aborting.'.format( e ) )
+  if options.file:
+    os.unlink( options.file )
+
+  raise e
+  sys.exit( 1 )
+
+sys.exit( 0 )
