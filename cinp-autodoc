@@ -30,38 +30,101 @@ else:
   logger.setLevel( logging.INFO )
 
 
-def format_parm( parm ):
-  result = '{0}({1})'.format( parm[ 'name' ], parm[ 'type' ] )
-  try:
-    if parm[ 'required' ]:
-      result += '(Req)'
-  except KeyError:
-    pass
+def _table( header_list, data_list ):
+  col_count = len( header_list )
+  col_width_list = [ len( i ) for i in header_list ]
+  for x in range( 0, col_count ):
+    col_width_list[x] = max( col_width_list[x], *[ len( i[x] ) for i in data_list ] )
 
-  try:
-    result += ' uri: {0}'.format( parm[ 'uri' ] )
-  except KeyError:
-    pass
+  result = ''
 
-  return result
+  result += '+-' + '-+-'.join( [ '-' * i for i in col_width_list ] ) + '-+\n'
+  result += '| ' + ' | '.join(
+             [ header_list[i] +
+               ( ' ' * ( col_width_list[i] - len( header_list[i] ) ) )
+               for i in range( 0, col_count ) ] ) + ' |\n'
+  result += '+=' + '=+='.join( [ '=' * i for i in col_width_list ] ) + '=+\n'
+  for data in data_list:
+    result += '| ' + ' | '.join(
+               [ data[i] +
+                 ( ' ' * ( col_width_list[i] - len( data[i] ) ) )
+                 for i in range( 0, col_count ) ] ) + ' |\n'
+    result += '+-' + '-+-'.join( [ '-' * i for i in col_width_list ] ) + '-+\n'
+
+  return result + '\n'
 
 
-def format_field( field ):
-  result = '{0}({1})({2})'.format( field[ 'name' ], field[ 'type' ], field[ 'mode' ] )
-  if field[ 'required' ]:
-    result += '(Req)'
+def parm_table( parm_list ):
+  item_list = []
+  if isinstance( parm_list, list ):
+    for parm in parm_list:
+      type = parm[ 'type' ]
 
-  try:
-    result += ' uri: {0}'.format( field[ 'uri' ] )
-  except KeyError:
-    pass
+      try:
+        type += ' ({0})'.format( parm[ 'uri' ] )
+      except KeyError:
+        pass
 
-  try:
-    result += ' - {0}'.format( field[ 'doc' ] )
-  except KeyError:
-    pass
+      try:
+        type += ' ({0})'.format( parm[ 'allowed_schemes' ] )
+      except KeyError:
+        pass
 
-  return result
+      item_list.append( (
+                          parm[ 'name' ],
+                          type,
+                          str( parm.get( 'length', '' ) ),
+                          str( parm.get( 'default', '' ) ),
+                          str( parm.get( 'choices', '' ) ),
+                          '*' if parm.get( 'is_array', False ) else ' ',
+                          parm.get( 'doc', '' )
+                         ) )
+
+    return _table( [ 'Name', 'Type', 'Length', 'Default', 'Choices', 'Array', 'Doc' ], item_list )
+  else:
+    parm = parm_list
+    type = parm[ 'type' ]
+
+    if type is None:
+      return ''
+
+    try:
+      type += ' ({0})'.format( parm[ 'uri' ] )
+    except KeyError:
+      pass
+
+    item_list.append( (
+                        type,
+                        str( parm.get( 'length', '' ) ),
+                        '*' if parm.get( 'is_array', False ) else ' ',
+                        parm.get( 'doc', '' )
+                      ) )
+    return _table( [ 'Type', 'Length', 'Array', 'Doc' ], item_list )
+
+
+def field_table( field_list ):
+  item_list = []
+  for field in field_list:
+    type = field[ 'type' ]
+
+    try:
+      type += ' ({0})'.format( field[ 'uri' ] )
+    except KeyError:
+      pass
+
+    item_list.append( (
+                        field[ 'name' ],
+                        type,
+                        str( field.get( 'length', '' ) ),
+                        str( field.get( 'default', '' ) ),
+                        str( field.get( 'choices', '' ) ),
+                        '*' if field.get( 'is_array', False ) else ' ',
+                        field[ 'mode' ],
+                        '*' if field[ 'required' ] else ' ',
+                        field.get( 'doc', '' )
+                      ) )
+
+  return _table( [ 'Name', 'Type', 'Length', 'Default', 'Choices', 'Array', 'Mode', 'Req', 'Doc' ], item_list )
 
 
 def do_namespace( url, path ):
@@ -78,26 +141,40 @@ def do_namespace( url, path ):
     item[ 'name' ] = '(root)'
 
   name = '.'.join( path + [ item[ 'name' ] ] )
+
+  doc = item[ 'doc' ].strip().replace( '\n', '\n  ' )
+  if len( doc ) > 0:
+    doc = """
+::
+
+  {0}
+
+""".format( doc )
+
   output.write( """
-------------{0}
 Namespace - {1}
-------------{0}
+============{0}
 URL: {2}
 
 API Version: {3}
 
+{4}
+
 """.format(
-        '-' * len( name ),
+        '=' * len( name ),
         name,
         url,
-        item[ 'api-version' ]
+        item[ 'api-version' ],
+        doc
        ) )
 
   path = path + [ item[ 'name' ] ]
 
+  item[ 'models' ].sort()
   for model in item[ 'models' ]:
     do_model( model )
 
+  item[ 'namespaces' ].sort()
   for child in item[ 'namespaces' ]:
     do_namespace( child, path )
 
@@ -112,15 +189,14 @@ def do_model( url ):
   if 'fields' not in item:
     print( 'expected model got "{0}"'.format( item ) )
 
-  try:
+  doc = item[ 'doc' ].strip().replace( '\n', '\n  ' )
+  if len( doc ) > 0:
     doc = """
 ::
 
   {0}
 
-""".format( item[ 'doc' ].strip().replace( '\n', '\n  ' ) )
-  except KeyError:
-    doc = ''
+""".format( doc )
 
   constants = []
   for tmp in item[ 'constants' ]:
@@ -139,34 +215,23 @@ def do_model( url ):
     constants = ''
 
   list_filters = []
-  for tmp in item[ 'list-filters' ]:
-    list_filters.append( '{0} - {1}'.format( tmp, ', '.join( [ format_parm( i ) for i in item[ 'list-filters' ][ tmp ] ] ) ) )
-
-  if list_filters:
+  if item[ 'list-filters' ]:
     list_filters = """List Filters
 ~~~~~~~~~~~~
 
-::
-
-  - {0}
-""".format( '\n  - '.join( list_filters ) )
+"""
+    for name, paramater_list in item[ 'list-filters' ].items():
+      list_filters += '{0}\n{1}\n'.format( name, '^' * len( name ) )
+      list_filters += parm_table( paramater_list )
 
   else:
     list_filters = ''
 
-  fields = []
-  for tmp in item[ 'fields' ]:
-    fields.append( format_field( tmp ) )
-
-  if fields:
+  if item[ 'fields' ]:
     fields = """Fields
 ~~~~~~
 
-::
-
-  - {0}
-""".format( '\n  - '.join( fields ) )
-
+""" + field_table( item[ 'fields' ] )
   else:
     fields = ''
 
@@ -205,31 +270,25 @@ def do_action( url ):
   if 'paramaters' not in item:
     print( 'expected action got "{0}"'.format( item ) )
 
-  try:
+  doc = item[ 'doc' ].strip().replace( '\n', '\n  ' )
+  if len( doc ) > 0:
     doc = """
 ::
 
   {0}
 
-""".format( item[ 'doc' ].strip().replace( '\n', '\n  ' ) )
-  except KeyError:
-    doc = ''
+""".format( doc )
 
-  try:
-    return_type = format_parm( item[ 'return-type' ] )
-  except KeyError:
-    return_type = None
+  if item.get( 'return-type', False ):
+    return_type = parm_table( item[ 'return-type' ] )
+    if return_type:
+      return_type = 'Return Type:\n\n' + return_type
 
-  paramaters = []
-  for parm in item.get( 'paramater-list', [] ):
-    paramaters.append( format_parm( parm ) )
+  else:
+    return_type = ''
 
-  if paramaters:
-    paramaters = """Paramaters::
-
-  - {0}
-""".format( '\n  - '.join( paramaters ) )
-
+  if item.get( 'paramaters', False ):
+    paramaters = 'Paramaters:\n\n' + parm_table( item[ 'paramaters' ] )
   else:
     paramaters = ''
 
@@ -243,9 +302,7 @@ Static: {3}
 
 {4}
 
-Return Type::
-
-  {5}
+{5}
 
 {6}
 
@@ -271,7 +328,7 @@ except ValueError:
   print( 'Error parsing "{0}"'.format( args[0] ) )
 
 try:
-  cinp = client.CInP( '{0}://{1}'.format( url.scheme, url.hostname ), url.path, url.port if url.port is not None else 80, options.proxy )
+  cinp = client.CInP( '{0}://{1}:{2}'.format( url.scheme, url.hostname, url.port if url.port is not None else 80 ), url.path, options.proxy )
 
   title = 'CInP API Documentation for {0}'.format( options.description )
 
@@ -279,7 +336,7 @@ try:
 
   do_namespace( url.path, [] )
 
-  output.write( '\nGenerated by CInP autodoc\n*************************\n' )
+  output.write( '\nGenerated by CInP autodoc\n-------------------------\n' )
 
 except Exception as e:
   output.close()

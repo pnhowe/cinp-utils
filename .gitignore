@@ -1,0 +1,5 @@
+/.cache
+/.coverage
+/debian
+dpkg-setup
+dpkg
