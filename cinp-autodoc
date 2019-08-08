@@ -33,8 +33,9 @@ else:
 def _table( header_list, data_list ):
   col_count = len( header_list )
   col_width_list = [ len( i ) for i in header_list ]
-  for x in range( 0, col_count ):
-    col_width_list[x] = max( col_width_list[x], *[ len( i[x] ) for i in data_list ] )
+  if data_list:
+    for x in range( 0, col_count ):
+      col_width_list[x] = max( col_width_list[x], *[ len( i[x] ) for i in data_list ] )
 
   result = ''
 
@@ -44,11 +45,15 @@ def _table( header_list, data_list ):
                ( ' ' * ( col_width_list[i] - len( header_list[i] ) ) )
                for i in range( 0, col_count ) ] ) + ' |\n'
   result += '+=' + '=+='.join( [ '=' * i for i in col_width_list ] ) + '=+\n'
-  for data in data_list:
-    result += '| ' + ' | '.join(
-               [ data[i] +
-                 ( ' ' * ( col_width_list[i] - len( data[i] ) ) )
-                 for i in range( 0, col_count ) ] ) + ' |\n'
+  if data_list:
+    for data in data_list:
+      result += '| ' + ' | '.join(
+                 [ data[i] +
+                   ( ' ' * ( col_width_list[i] - len( data[i] ) ) )
+                   for i in range( 0, col_count ) ] ) + ' |\n'
+      result += '+-' + '-+-'.join( [ '-' * i for i in col_width_list ] ) + '-+\n'
+      
+  else:
     result += '+-' + '-+-'.join( [ '-' * i for i in col_width_list ] ) + '-+\n'
 
   return result + '\n'
@@ -142,7 +147,7 @@ def do_namespace( url, path ):
 
   name = '.'.join( path + [ item[ 'name' ] ] )
 
-  doc = item[ 'doc' ].strip().replace( '\n', '\n  ' )
+  doc = item.get( 'doc', '' ).strip().replace( '\n', '\n  ' )
   if len( doc ) > 0:
     doc = """
 ::
@@ -189,7 +194,7 @@ def do_model( url ):
   if 'fields' not in item:
     print( 'expected model got "{0}"'.format( item ) )
 
-  doc = item[ 'doc' ].strip().replace( '\n', '\n  ' )
+  doc = item.get( 'doc', '' ).strip().replace( '\n', '\n  ' )
   if len( doc ) > 0:
     doc = """
 ::
@@ -270,7 +275,7 @@ def do_action( url ):
   if 'paramaters' not in item:
     print( 'expected action got "{0}"'.format( item ) )
 
-  doc = item[ 'doc' ].strip().replace( '\n', '\n  ' )
+  doc = item.get( 'doc', '' ).strip().replace( '\n', '\n  ' )
   if len( doc ) > 0:
     doc = """
 ::
