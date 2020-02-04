@@ -3,3 +3,4 @@
 /debian
 dpkg-setup
 dpkg
+__pycache__

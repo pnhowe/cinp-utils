@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+
+import sys
+import os
+import logging
+import urllib
+from datetime import datetime
+from optparse import OptionParser
+
+from cinp import client
+
+
+oparser = OptionParser( description='CInP Auto Documentation', usage='usage %prog [options] <CInP endpoint, ie: http://service/api/v1/ >' )
+
+oparser.add_option( '-s', '--service', help='Service name' )
+oparser.add_option( '-p', '--proxy', help='HTTP Proxy', default=None )
+oparser.add_option( '-d', '--dir', help='Target Directory, default: "gen"', metavar='DIRNAME', default='gen' )
+oparser.add_option( '-l', '--language', help='Target Language, default: python', default='python', choices=[ 'python', 'go' ] )
+oparser.add_option( '-v', '--verbose', default=False, action='store_true' )
+
+
+def get_namespace( cinp, url ):
+  try:
+    item = cinp.describe( url )
+  except client.NotAuthorized:
+    logging.warning( 'describing namespace "{0}" is not Authorized'.format( url ) )
+    return
+
+  if 'namespaces' not in item:
+    print( 'expected namespace got "{0}"'.format( item ) )
+
+  result = {
+             'name': item[ 'name' ],
+             'url': url,
+             'doc': item.get( 'doc', '' ).strip(),
+             'api_version': item[ 'api-version' ],
+             'model_list': [],
+             'namespace_list': []
+           }
+
+  for url in item[ 'models' ]:
+    result[ 'model_list' ].append( get_model( cinp, url ) )
+
+  for url in item[ 'namespaces' ]:
+    result[ 'namespace_list' ].append( get_namespace( cinp, url ) )
+
+  return result
+
+
+def get_model( cinp, url ):
+  try:
+    item = cinp.describe( url )
+  except client.NotAuthorized:
+    logging.warning( 'describing model "{0}" is not Authorized'.format( url ) )
+    return
+
+  if 'fields' not in item:
+    logging.error( 'expected model got "{0}"'.format( item ) )
+    return
+
+  result = {
+              'name': item[ 'name' ],
+              'url': url,
+              'doc': item.get( 'doc', '' ).strip(),
+              'constant_list': item[ 'constants' ],
+              'list_filter_list': item[ 'list-filters' ],
+              'field_list': item[ 'fields' ],
+              'action_list': []
+            }
+
+  for url in item[ 'actions' ]:
+    tmp = get_action( cinp, url )
+    if tmp is not None:
+      result[ 'action_list' ].append( tmp )
+
+  return result
+
+
+def get_action( cinp, url ):
+  try:
+    item = cinp.describe( url )
+  except client.NotAuthorized:
+    logging.warning( 'describing action "{0}" is not Authorized'.format( url ) )
+    return None
+
+  if 'paramaters' not in item:
+    logging.error( 'expected action got "{0}"'.format( item ) )
+    return None
+
+  return( {
+             'name': item[ 'name' ],
+             'url': url,
+             'static': item[ 'static' ],
+             'return_type': item.get( 'return-type', None ),
+             'paramater_list': item.get( 'paramaters', [] )
+            } )
+
+
+def main():
+  ( options, args ) = oparser.parse_args()
+
+  if len( args ) != 1:
+    oparser.error( 'CInP Enpoint required' )
+
+  if not options.service:  # TODO: also regex service name to make sure it is valid
+    oparser.error( 'Service name is required' )
+
+  if options.language == 'python':
+    from cinp_utils.codegen_python import python_render_func
+    render_func = python_render_func
+
+  elif options.language == 'go':
+    from cinp_utils.codegen_go import go_render_func
+    render_func = go_render_func
+
+  else:
+    oparser.error( 'Unknown language type "{0}"'.format( options.language ) )
+    sys.exit( 1 )
+
+  try:
+    url = urllib.parse.urlparse( args[0] )
+  except ValueError:
+    oparser.error( 'Error parsing "{0}"'.format( args[0] ) )
+    sys.exit( 1 )
+
+  wrk_dir = options.dir
+  if not os.path.isdir( wrk_dir ):
+    oparser.error( 'target dir is does not exist or is not a directory "{0}"'.format( wrk_dir ) )
+    sys.exit( 1 )
+
+  logging.basicConfig()
+  handler = logging.StreamHandler( sys.stderr )
+
+  if options.verbose:
+    handler.setLevel( logging.DEBUG )
+  else:
+    handler.setLevel( logging.INFO )
+
+  try:
+    cinp = client.CInP( '{0}://{1}:{2}'.format( url.scheme, url.hostname, url.port if url.port is not None else 80 ), url.path, options.proxy )
+
+    header_map = { 'url': args[0], 'service': options.service, 'root_path': url.path, 'timestamp': datetime.utcnow().isoformat() }
+
+    root = get_namespace( cinp, url.path )
+    render_func( wrk_dir, header_map, root )
+
+  except Exception as e:
+    logging.exception( 'Error "{0}", aborting.'.format( e ) )
+    sys.exit( 1 )
+
+  sys.exit( 0 )
+
+
+if __name__ == '__main__':
+  main()
