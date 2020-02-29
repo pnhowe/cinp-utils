@@ -23,11 +23,12 @@ def get_namespace( cinp, url ):
   try:
     item = cinp.describe( url )
   except client.NotAuthorized:
-    logging.warning( 'describing namespace "{0}" is not Authorized'.format( url ) )
+    logging.warning( 'Describing Namespace "{0}" is not Authorized'.format( url ) )
     return
 
   if 'namespaces' not in item:
-    print( 'expected namespace got "{0}"'.format( item ) )
+    logging.error( 'Expected Namespace got "{0}"'.format( item ) )
+    return
 
   result = {
              'name': item[ 'name' ],
@@ -51,11 +52,11 @@ def get_model( cinp, url ):
   try:
     item = cinp.describe( url )
   except client.NotAuthorized:
-    logging.warning( 'describing model "{0}" is not Authorized'.format( url ) )
+    logging.warning( 'Describing Model "{0}" is not Authorized'.format( url ) )
     return
 
   if 'fields' not in item:
-    logging.error( 'expected model got "{0}"'.format( item ) )
+    logging.error( 'Expected Model got "{0}"'.format( item ) )
     return
 
   result = {
@@ -80,11 +81,11 @@ def get_action( cinp, url ):
   try:
     item = cinp.describe( url )
   except client.NotAuthorized:
-    logging.warning( 'describing action "{0}" is not Authorized'.format( url ) )
+    logging.warning( 'Describing Action "{0}" is not Authorized'.format( url ) )
     return None
 
   if 'paramaters' not in item:
-    logging.error( 'expected action got "{0}"'.format( item ) )
+    logging.error( 'Expected Action got "{0}"'.format( item ) )
     return None
 
   return( {
@@ -114,18 +115,18 @@ def main():
     render_func = go_render_func
 
   else:
-    oparser.error( 'Unknown language type "{0}"'.format( options.language ) )
+    oparser.error( 'Unknown Language Type "{0}"'.format( options.language ) )
     sys.exit( 1 )
 
   try:
     url = urllib.parse.urlparse( args[0] )
   except ValueError:
-    oparser.error( 'Error parsing "{0}"'.format( args[0] ) )
+    oparser.error( 'Error Parsing "{0}"'.format( args[0] ) )
     sys.exit( 1 )
 
   wrk_dir = options.dir
   if not os.path.isdir( wrk_dir ):
-    oparser.error( 'target dir is does not exist or is not a directory "{0}"'.format( wrk_dir ) )
+    oparser.error( 'Target Dir is does not exist or is not a Directory "{0}"'.format( wrk_dir ) )
     sys.exit( 1 )
 
   logging.basicConfig()
@@ -145,7 +146,7 @@ def main():
     render_func( wrk_dir, header_map, root )
 
   except Exception as e:
-    logging.exception( 'Error "{0}", aborting.'.format( e ) )
+    logging.exception( 'Error "{0}", Aborting.'.format( e ) )
     sys.exit( 1 )
 
   sys.exit( 0 )
