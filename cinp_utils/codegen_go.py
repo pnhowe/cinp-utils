@@ -29,6 +29,9 @@ def goType( cinpType ):
   elif cinpType[ 'type' ] == 'Integer':
     return prefix + 'int'
 
+  elif cinpType[ 'type' ] == 'Boolean':
+    return prefix + 'bool'
+
   else:
     return prefix + 'string'
 
@@ -50,6 +53,12 @@ def goEmptyVal( cinpType ):
       return '[]int{}'
     else:
       return '0'
+
+  elif cinpType[ 'type' ] == 'Boolean':
+    if is_array:
+      return '[]bool{}'
+    else:
+      return 'false'
 
   else:
     if is_array:
@@ -83,6 +92,12 @@ def goNewVal( cinpType ):
       return '[]int{}'
     else:
       return '0'
+
+  elif cinpType == 'Boolean':
+    if is_array:
+      return '[]bool{}'
+    else:
+      return 'false'
 
   else:
     if is_array:
@@ -258,6 +273,7 @@ func (service *{{service|title}}) {{model_name}}List(filterName string, filterVa
 	go func() {
 		defer close(out)
 		for v := range in {
+			v.(*{{model_name}}).cinp = service.cinp
 			out <- v.(*{{model_name}})
 		}
 	}()

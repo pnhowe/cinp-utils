@@ -100,6 +100,7 @@ def write_namespace( fp, prefix, namespace ):
 
 def python_render_func( wrk_dir, header_map, root ):
   header_map[ 'api_version' ] = root[ 'api_version' ]
+  root[ 'name' ] = ''
 
   with open( os.path.join( wrk_dir, '{0}.py'.format( header_map[ 'service' ] ) ), 'w' ) as fp:  # TODO: make sure this is filsystem safe
     fp.write( header_template.render( **header_map ) )
