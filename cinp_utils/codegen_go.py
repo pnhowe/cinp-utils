@@ -292,20 +292,20 @@ func ({% if action.static %}service *{{service|title}}{% else %}object *{{model_
 	uri := "{{action.url}}"{% else %}
 	_, _, _, ids, _, err := object.cinp.Split(object.GetID())
 	if err != nil {
-		return {{action.return_type|goemptyval}}, err
+		return {% if action.return_type %}{{action.return_type|goemptyval}}, {% endif %}err
 	}
 	uri, err := object.cinp.UpdateIDs("{{action.url}}", ids)
 	if err != nil {
-		return {{action.return_type|goemptyval}}, err
+		return {% if action.return_type %}{{action.return_type|goemptyval}}, {% endif %}err
 	}{% endif %}
 
-	result := {{action.return_type|gonewval}}
+	result := {% if action.return_type %}{{action.return_type|gonewval}}{% else %}""{% endif %}
 
 	if err := {% if action.static %}service{% else %}object{% endif %}.cinp.Call(uri, &args, &result); err != nil {
-		return {{action.return_type|goemptyval}}, err
+		return {% if action.return_type %}{{action.return_type|goemptyval}}, {% endif %}err
 	}
 
-	return result, nil
+	return {% if action.return_type %}result, {% endif %}nil
 }
 {% endfor %}{% endif %}
 """)  # noqa

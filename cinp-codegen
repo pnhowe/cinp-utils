@@ -89,11 +89,15 @@ def get_action( cinp, url ):
     logging.error( 'Expected Action got "{0}"'.format( item ) )
     return None
 
+  return_type = item.get( 'return-type', None )
+  if return_type is not None and return_type[ 'type' ] is None:
+    return_type = None
+
   return( {
              'name': item[ 'name' ],
              'url': url,
              'static': item[ 'static' ],
-             'return_type': item.get( 'return-type', None ),
+             'return_type': return_type,
              'paramater_list': item.get( 'paramaters', [] )
             } )
 
