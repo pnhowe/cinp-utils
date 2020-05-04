@@ -226,7 +226,7 @@ func (service *{{service|title}}) {{model_name}}NewWithID(id string) *{{model_na
 	result.SetID("{{url}}:"+id+":")
 	return &result
 }
-
+{% if 'GET' not in not_allowed_method_list %}
 // {{model_name}}Get - Get function for Model {{name}}
 func (service *{{service|title}}) {{model_name}}Get(id string) (*{{model_name}}, error) {
 	object, err := service.cinp.Get("{{url}}:"+id+":")
@@ -238,7 +238,7 @@ func (service *{{service|title}}) {{model_name}}Get(id string) (*{{model_name}},
 
 	return result, nil
 }
-
+{% endif %}{% if 'CREATE' not in not_allowed_method_list %}
 // Create - Create function for Model {{name}}
 func (object *{{model_name}}) Create() error {
 	if err := object.cinp.Create("{{url}}", object); err != nil {
@@ -247,7 +247,7 @@ func (object *{{model_name}}) Create() error {
 
 	return nil
 }
-
+{% endif %}{% if 'UPDATE' not in not_allowed_method_list %}
 // Update - Update function for Model {{name}}
 func (object *{{model_name}}) Update(fieldList []string) error {
 	if err := object.cinp.Update(object, fieldList); err != nil {
@@ -256,7 +256,7 @@ func (object *{{model_name}}) Update(fieldList []string) error {
 
 	return nil
 }
-
+{% endif %}{% if 'DELETE' not in not_allowed_method_list %}
 // Delete - Delete function for Model {{name}}
 func (object *{{model_name}}) Delete() error {
 	if err := object.cinp.Delete(object); err != nil {
@@ -265,7 +265,7 @@ func (object *{{model_name}}) Delete() error {
 
 	return nil
 }
-
+{% endif %}{% if 'LIST' not in not_allowed_method_list %}
 // {{model_name}}List - List function for Model {{name}}
 func (service *{{service|title}}) {{model_name}}List(filterName string, filterValues map[string]interface{}) <-chan *{{model_name}} {
 	in := service.cinp.ListObjects("{{url}}", reflect.TypeOf({{model_name}}{}), filterName, filterValues, 50)
@@ -279,6 +279,7 @@ func (service *{{service|title}}) {{model_name}}List(filterName string, filterVa
 	}()
 	return out
 }
+{% endif %}{% if 'CALL' not in not_allowed_method_list %}
 {% for action in action_list %}{% if action.static %}{% set funcname = model_name + "Call" + action.name|capitalize %}{% else %}{% set funcname = "Call" + action.name|capitalize %}{% endif %}
 // {{funcname}} calls {{action.name}}{% if action.doc %}
 /*
@@ -306,7 +307,7 @@ func ({% if action.static %}service *{{service|title}}{% else %}object *{{model_
 
 	return result, nil
 }
-{% endfor %}
+{% endfor %}{% endif %}
 """)  # noqa
 
 register_template = env.from_string( """
@@ -371,7 +372,8 @@ def render_model( service, prefix, model ):
                 'url': model[ 'url' ],
                 'doc': model[ 'doc' ],
                 'field_list': model[ 'field_list' ],
-                'action_list': model[ 'action_list' ]
+                'action_list': model[ 'action_list' ],
+                'not_allowed_method_list': model[ 'not_allowed_method_list' ]
               }
 
   return model_template.render( **value_map )
