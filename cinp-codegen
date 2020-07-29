@@ -40,10 +40,14 @@ def get_namespace( cinp, url ):
            }
 
   for url in item[ 'models' ]:
-    result[ 'model_list' ].append( get_model( cinp, url ) )
+    model = get_model( cinp, url )
+    if model is not None:
+      result[ 'model_list' ].append( model )
 
   for url in item[ 'namespaces' ]:
-    result[ 'namespace_list' ].append( get_namespace( cinp, url ) )
+    namespace = get_namespace( cinp, url )
+    if namespace is not None:
+      result[ 'namespace_list' ].append( namespace )
 
   return result
 
@@ -148,6 +152,10 @@ def main():
     header_map = { 'url': args[0], 'service': options.service, 'root_path': url.path, 'timestamp': datetime.utcnow().isoformat() }
 
     root = get_namespace( cinp, url.path )
+    if root is None:
+      logging.error( 'Unable to Describe root node' )
+      sys.exit( 1 )
+
     render_func( wrk_dir, header_map, root )
 
   except Exception as e:

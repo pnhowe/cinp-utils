@@ -353,7 +353,9 @@ def do_namespace( wrk_dir, header_map, prefix, namespace ):
     for model in namespace[ 'model_list' ]:
       model_buff += render_model( header_map[ 'service' ], prefix, model )
 
-    fp.write( ns_template.render( include_list=set( sorted( include_list ) ), **value_map ) )
+    include_list = sorted( list( set( include_list ) ) )
+
+    fp.write( ns_template.render( include_list=include_list, **value_map ) )
     fp.write( model_buff )
 
     if namespace[ 'model_list' ]:
