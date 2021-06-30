@@ -29,11 +29,15 @@ def table( data_list, header_list ):
 
 
 def parm_extract( parm_list ):
-  return [ ( parm[ 'name' ], parm[ 'type' ], str( parm.get( 'length', '' ) ), '*' if parm.get( 'is_array', False ) else ' ', str( parm.get( 'choice_list', '' ) ), str( parm.get( 'allowed_scheme_list', '' ) ), parm.get( 'uri', '' ), parm.get( 'doc', '' ) ) for parm in parm_list ]
+  return [ ( parm[ 'name' ], parm[ 'type' ], str( parm.get( 'length', '' ) ), 'Yes' if parm.get( 'is_array', False ) else ' ', str( parm.get( 'choice_list', '' ) ), str( parm.get( 'allowed_scheme_list', '' ) ), parm.get( 'uri', '' ), parm.get( 'doc', '' ) ) for parm in parm_list ]
 
 
 def field_extract( field_list ):
-  return [ ( field[ 'name' ], field[ 'type' ], str( field.get( 'length', '' ) ), '' if field.get( 'default', '' ) is None else str( field.get( 'default', '' ) ), '*' if field.get( 'is_array', False ) else ' ', str( field.get( 'choice_list', '' ) ), str( field.get( 'allowed_scheme_list', '' ) ), field.get( 'uri', '' ), field.get( 'doc', '' ) ) for field in field_list ]
+  return [ ( field[ 'name' ], field[ 'type' ], str( field.get( 'length', '' ) ), '' if field.get( 'default', '' ) is None else str( field.get( 'default', '' ) ), 'Yes' if field.get( 'is_array', False ) else ' ', str( field.get( 'choice_list', '' ) ), str( field.get( 'allowed_scheme_list', '' ) ), field.get( 'uri', '' ), field.get( 'doc', '' ) ) for field in field_list ]
+
+
+def return_type_extract( return_type ):
+  return [ ( return_type[ 'type' ], str( return_type.get( 'length', '' ) ), '' if return_type.get( 'default', '' ) is None else str( return_type.get( 'default', '' ) ), 'Yes' if return_type.get( 'is_array', False ) else ' ', str( return_type.get( 'choice_list', '' ) ), str( return_type.get( 'allowed_scheme_list', '' ) ), return_type.get( 'uri', '' ), return_type.get( 'doc', '' ) ) ]
 
 
 env = Environment()
@@ -41,6 +45,7 @@ env.filters[ 'titleize' ] = titleize
 env.filters[ 'table' ] = table
 env.filters[ 'parm_extract' ] = parm_extract
 env.filters[ 'field_extract' ] = field_extract
+env.filters[ 'return_type_extract' ] = return_type_extract
 
 header_template = env.from_string( """==========================={{ service|titleize }}
 CInP API Documentation for {{ service }}
@@ -91,8 +96,7 @@ List Filters
 {% endif %}{% if field_list %}
 Fields
 ~~~~~~
-{{ field_list|field_extract|table( [ 'Name', 'Type', 'Length', 'Default', 'Array', 'Choice List', 'Schema List', 'Model', 'Doc' ] ) }}
-{% endif %}
+{{ field_list|field_extract|table( [ 'Name', 'Type', 'Length', 'Default', 'Array', 'Choice List', 'Schema List', 'Model', 'Doc' ] ) }}{% endif %}
 """ )
 
 action_template = env.from_string( """Action - {{ name }}
@@ -100,20 +104,19 @@ action_template = env.from_string( """Action - {{ name }}
 
 URL: *{{ url }}*
 
-Static: *{% if static %}Yes{% else %}No{% endif %}
+Static: *{% if static %}Yes{% else %}No{% endif %}*
 {% if doc %}
 ::
 
   {{ doc }}
-{% endif %}
+{% endif %}{% if return_type %}
+Return Type
+~~~~~~~~~~~
+{{ return_type|return_type_extract|table( [ 'Type', 'Length', 'Array', 'Choice List', 'Schema List', 'Model', 'Doc' ] ) }}{% endif %}{% if paramater_list %}
+Parameters
+~~~~~~~~~~
+{{ paramater_list|parm_extract|table( [ 'Name', 'Type', 'Length', 'Array', 'Choice List', 'Schema List', 'Model', 'Doc' ] ) }}{% endif %}
 
-{{ return_type }}
-
-{% if paramater_list %}
-Paramater
-~~~~~~~~~
-{{ paramater_list|parm_extract|table( [ 'Name', 'Type', 'Length', 'Array', 'Choice List', 'Schema List', 'Model', 'Doc' ] ) }}
-{% endif %}
 """ )
 
 
@@ -133,13 +136,13 @@ def write_model( fp, model ):
   for action in model.get( 'action_list', [] ):
     value_map = {
                   'name': action[ 'name' ],
+                  'url': action[ 'url' ],
                   'static': action[ 'static' ],
                   'doc': action.get( 'doc', '' ).strip().replace( '\n', '\n  ' ),
                   'return_type': action.get( 'return_type', {} ),
                   'paramater_list': action.get( 'paramater_list', [] )
                 }
     fp.write( action_template.render( **value_map ) )
-
 
 
 def write_namespace( fp, namespace ):
