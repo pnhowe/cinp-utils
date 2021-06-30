@@ -75,9 +75,7 @@ def write_model( fp, prefix, model ):
                 'prefix': prefix,
                 'name': model[ 'name' ],
                 'url': model[ 'url' ],
-                'doc': model[ 'doc' ],
-                'field_list': model[ 'field_list' ],
-                'action_list': model[ 'action_list' ]
+                'doc': model[ 'doc' ]
               }
 
   fp.write( model_template.render( **value_map ) )

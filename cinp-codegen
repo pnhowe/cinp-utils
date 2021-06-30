@@ -15,19 +15,19 @@ oparser = OptionParser( description='CInP Auto Documentation', usage='usage %pro
 oparser.add_option( '-s', '--service', help='Service name' )
 oparser.add_option( '-p', '--proxy', help='HTTP Proxy', default=None )
 oparser.add_option( '-d', '--dir', help='Target Directory, default: "gen"', metavar='DIRNAME', default='gen' )
-oparser.add_option( '-l', '--language', help='Target Language, default: python', default='python', choices=[ 'python', 'go' ] )
+oparser.add_option( '-l', '--language', help='Target Language, note: rst is reStructuredText for documentation, default: rst', default='rst', choices=[ 'rst', 'python', 'go' ] )
 oparser.add_option( '-v', '--verbose', default=False, action='store_true' )
 
 
 def get_namespace( cinp, url ):
   try:
-    item = cinp.describe( url )
+    item, type = cinp.describe( url )
   except client.NotAuthorized:
     logging.warning( 'Describing Namespace "{0}" is not Authorized'.format( url ) )
     return
 
-  if 'namespaces' not in item:
-    logging.error( 'Expected Namespace got "{0}"'.format( item ) )
+  if type != 'Namespace':
+    logging.error( 'Expected Namespace got "{0}"'.format( type ) )
     return
 
   result = {
@@ -54,13 +54,13 @@ def get_namespace( cinp, url ):
 
 def get_model( cinp, url ):
   try:
-    item = cinp.describe( url )
+    item, type = cinp.describe( url )
   except client.NotAuthorized:
     logging.warning( 'Describing Model "{0}" is not Authorized'.format( url ) )
     return
 
-  if 'fields' not in item:
-    logging.error( 'Expected Model got "{0}"'.format( item ) )
+  if type != 'Model':
+    logging.error( 'Expected Model got "{0}"'.format( type ) )
     return
 
   result = {
@@ -68,9 +68,10 @@ def get_model( cinp, url ):
               'url': url,
               'doc': item.get( 'doc', '' ).strip(),
               'constant_list': item[ 'constants' ],
-              'list_filter_list': item[ 'list-filters' ],
+              'list_filter_map': item[ 'list-filters' ],
               'field_list': item[ 'fields' ],
-              'not_allowed_method_list': item[ 'not-allowed-methods' ],
+              'not_allowed_verb_list': item[ 'not-allowed-verbs' ],
+              'id_field_name': item.get( 'id-field-name', None ),
               'action_list': []
             }
 
@@ -84,13 +85,13 @@ def get_model( cinp, url ):
 
 def get_action( cinp, url ):
   try:
-    item = cinp.describe( url )
+    item, type = cinp.describe( url )
   except client.NotAuthorized:
     logging.warning( 'Describing Action "{0}" is not Authorized'.format( url ) )
     return None
 
-  if 'paramaters' not in item:
-    logging.error( 'Expected Action got "{0}"'.format( item ) )
+  if type != 'Action':
+    logging.error( 'Expected Action got "{0}"'.format( type ) )
     return None
 
   return_type = item.get( 'return-type', None )
@@ -115,7 +116,11 @@ def main():
   if not options.service:  # TODO: also regex service name to make sure it is valid
     oparser.error( 'Service name is required' )
 
-  if options.language == 'python':
+  elif options.language == 'rst':
+    from cinp_utils.codegen_rst import rst_render_func
+    render_func = rst_render_func
+
+  elif options.language == 'python':
     from cinp_utils.codegen_python import python_render_func
     render_func = python_render_func
 
