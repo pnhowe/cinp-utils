@@ -82,10 +82,10 @@ Not Allowed Verbs: *{% for item in not_allowed_verb_list %}{{ item }}{% if not l
 ::
 
   {{ doc }}
-{% endif %}{% if constant_list %}
+{% endif %}{% if constant_map %}
 Constants
-~~~~~~~~~ {% for item in constant_list %}
- - {{ item }}{% endfor %}
+~~~~~~~~~ {% for key, value in constant_map %}
+ - {{ key }}: {{ value }}{% endfor %}
 {% endif %}{% if list_filter_map %}
 List Filters
 ~~~~~~~~~~~~
@@ -124,16 +124,16 @@ def write_model( fp, model ):
   value_map = {
                 'name': model[ 'name' ],
                 'url': model[ 'url' ],
-                'doc': model.get( 'doc', '' ).strip().replace( '\n', '\n  ' ),
-                'constant_list': model.get( 'constant_list', [] ),
-                'list_filter_map': model.get( 'list_filter_map', [] ),
+                'doc': model[ 'doc' ].strip().replace( '\n', '\n  ' ),
+                'constant_map': model[ 'constant_map' ],
+                'list_filter_map': model[ 'list_filter_map' ],
                 'field_list': model[ 'field_list' ],
-                'not_allowed_verb_list': model.get( 'not_allowed_verb_list', [] ),
-                'id_field_name': model.get( 'id_field_name', '' ),
+                'not_allowed_verb_list': model[ 'not_allowed_verb_list' ],
+                'id_field_name': model[ 'id_field_name' ],
               }
 
   fp.write( model_template.render( **value_map ) )
-  for action in model.get( 'action_list', [] ):
+  for action in model[ 'action_list' ]:
     value_map = {
                   'name': action[ 'name' ],
                   'url': action[ 'url' ],

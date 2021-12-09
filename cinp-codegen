@@ -15,7 +15,7 @@ oparser = OptionParser( description='CInP Auto Documentation', usage='usage %pro
 oparser.add_option( '-s', '--service', help='Service name' )
 oparser.add_option( '-p', '--proxy', help='HTTP Proxy', default=None )
 oparser.add_option( '-d', '--dir', help='Target Directory, default: "gen"', metavar='DIRNAME', default='gen' )
-oparser.add_option( '-l', '--language', help='Target Language, note: rst is reStructuredText for documentation, default: rst', default='rst', choices=[ 'rst', 'python', 'go' ] )
+oparser.add_option( '-l', '--language', help='Target Language, note: rst is reStructuredText for documentation, default: rst', default='rst', choices=[ 'rst', 'python', 'go', 'ts' ] )
 oparser.add_option( '-v', '--verbose', default=False, action='store_true' )
 
 
@@ -67,7 +67,7 @@ def get_model( cinp, url ):
               'name': item[ 'name' ],
               'url': url,
               'doc': item.get( 'doc', '' ).strip(),
-              'constant_list': item[ 'constants' ],
+              'constant_map': item[ 'constants' ],
               'list_filter_map': item[ 'list-filters' ],
               'field_list': item[ 'fields' ],
               'not_allowed_verb_list': item[ 'not-allowed-verbs' ],
@@ -127,6 +127,10 @@ def main():
   elif options.language == 'go':
     from cinp_utils.codegen_go import go_render_func
     render_func = go_render_func
+
+  elif options.language == 'ts':
+    from cinp_utils.codegen_ts import ts_render_func
+    render_func = ts_render_func
 
   else:
     oparser.error( 'Unknown Language Type "{0}"'.format( options.language ) )
