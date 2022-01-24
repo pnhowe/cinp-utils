@@ -1,5 +1,5 @@
-cinp-utils (0.2-1) DIST; urgency=medium
+cinp-utils (0.3.0-1) DIST; urgency=medium
 
-  * Initial release
+  * Continuous release
 
  -- Peter Howe <pnhowe@gmail.com>  Thu, 08 Aug 2019 06:51:26 -0600

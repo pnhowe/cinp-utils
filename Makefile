@@ -7,7 +7,13 @@ all:
 
 install:
 	mkdir -p $(DESTDIR)/usr/bin
-	install -m755 cinp-autodoc $(DESTDIR)/usr/bin
+	install -m755 cinp-codegen $(DESTDIR)/usr/bin
+
+ifeq (ubuntu, $(DISTRO))
+	./setup.py install --root=$(DESTDIR) --install-purelib=/usr/lib/python3/dist-packages/ --prefix=/usr --no-compile -O0
+else
+	./setup.py install --root=$(DESTDIR) --prefix=/usr --no-compile -O0
+endif
 
 version:
 	echo $(VERSION)
@@ -26,8 +32,8 @@ dist-clean: clean
 
 .PHONY:: all install version clean dist-clean
 
-test-distros:
-	echo ubuntu-xenial
+test-blueprints:
+	echo ubuntu-bionic-base
 
 test-requires:
 	echo flake8
@@ -37,10 +43,10 @@ lint:
 
 test:
 
-.PHONY:: test-distroy lint-requires lint test-requires test
+.PHONY:: test-blueprints lint-requires lint test-requires test
 
-dpkg-distros:
-	echo ubuntu-xenial ubuntu-bionic
+dpkg-blueprints:
+	echo ubuntu-bionic-base ubuntu-focal-base
 
 dpkg-requires:
 	echo dpkg-dev debhelper python3-dev python3-setuptools
@@ -56,4 +62,4 @@ dpkg:
 dpkg-file:
 	echo $(shell ls ../*.deb)
 
-.PHONY:: dpkg-distros dpkg-requires dpkg-setup dpkg-file
+.PHONY:: dpkg-blueprints dpkg-requires dpkg-setup dpkg-file

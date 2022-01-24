@@ -258,7 +258,7 @@ func (service *{{ service|title }}) {{ model_name }}NewWithID(id {{ id_field|got
 	result.SetID("{{ url }}:" + {{ id_field|gostrid }} + ":")
 	return &result
 }
-{% endif %}{% if 'GET' not in not_allowed_verb_list %}
+{% endif %}{% if 'GET' not in not_allowed_verb_list and id_field %}
 // {{ model_name }}Get - Get function for Model {{ name }}
 func (service *{{ service|title }}) {{ model_name }}Get(id {{ id_field|gotype }}) (*{{ model_name }}, error) {
 	object, err := service.cinp.Get("{{ url }}:" + {{ id_field|gostrid }} + ":")
@@ -279,7 +279,7 @@ func (object *{{ model_name }}) Create() error {
 
 	return nil
 }
-{% endif %}{% if 'UPDATE' not in not_allowed_verb_list %}
+{% endif %}{% if 'UPDATE' not in not_allowed_verb_list and id_field %}
 // Update - Update function for Model {{ name }}
 func (object *{{ model_name }}) Update(fieldList []string) error {
 	if err := object.cinp.Update(object, fieldList); err != nil {
@@ -288,7 +288,7 @@ func (object *{{ model_name }}) Update(fieldList []string) error {
 
 	return nil
 }
-{% endif %}{% if 'DELETE' not in not_allowed_verb_list %}
+{% endif %}{% if 'DELETE' not in not_allowed_verb_list and id_field %}
 // Delete - Delete function for Model {{ name }}
 func (object *{{ model_name }}) Delete() error {
 	if err := object.cinp.Delete(object); err != nil {

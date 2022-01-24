@@ -71,6 +71,8 @@ def get_model( cinp, url ):
               'list_filter_map': item[ 'list-filters' ],
               'field_list': item[ 'fields' ],
               'not_allowed_verb_list': item[ 'not-allowed-verbs' ],
+              'query_filter_fields': item[ 'query-filter-fields' ],
+              'query_sort_fields': item[ 'query-sort-fields' ],
               'id_field_name': item.get( 'id-field-name', None ),
               'action_list': []
             }
