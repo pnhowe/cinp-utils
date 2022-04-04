@@ -159,7 +159,7 @@ type {{ service|title }} struct {
 }
 
 // New{{ service|title }} creates and returns a new {{ service|title }}
-func New{{ service|title }}(host string, proxy string, username string, password string) (*{{ service|title }}, error) {
+func New{{ service|title }}(host string, proxy string) (*{{ service|title }}, error) {
 	var err error
 	s := {{ service|title }}{}
 	s.cinp, err = cinp.NewCInP(host, "{{ root_path }}", proxy)
@@ -178,23 +178,7 @@ func New{{ service|title }}(host string, proxy string, username string, password
 		return nil, fmt.Errorf("API version mismatch.  Got '%s', expected '{{ api_version }}'", APIVersion)
 	}
 
-	if username != "" {
-		token, err := s.AuthUserCallLogin(username, password)
-		if err != nil {
-			return nil, err
-		}
-		s.cinp.SetAuth(username, token)
-	}
-
 	return &s, nil
-}
-
-// Logout calles the Logout method and clears the auth token
-func (s *{{ service|title }}) Logout() {
-	if s.cinp.IsAuthenticated() {
-		s.AuthUserCallLogout()
-		s.cinp.SetAuth("", "")
-	}
 }
 
 // GetAPIVersion Get the API version number for the Namespace at the URI
@@ -209,6 +193,11 @@ func (s *{{ service|title }}) GetAPIVersion(uri string) (string, error ) {
 	}
 
 	return r.APIVersion, nil
+}
+
+// SetHeader sets a request header
+func (s *{{ service|title }}) SetHeader(name string, value string) {
+	s.cinp.SetHeader(name, value )
 }
 """ )  # noqa
 
@@ -305,6 +294,11 @@ func (service *{{ service|title }}) {{ model_name }}ListFilters() [{{ list_filte
 
 // {{ model_name }}List - List function for Model {{ name }}
 func (service *{{ service|title }}) {{ model_name }}List(filterName string, filterValues map[string]interface{}) (<-chan *{{ model_name }}, error) {
+{%- if query_filter_fields or query_sort_fields %}
+	if filterName == "_query_" {
+		goto good
+	}
+{% endif %}
 	if filterName != "" {
 		for _, item := range service.{{ model_name }}ListFilters() {
 			if item == filterName {
@@ -312,8 +306,8 @@ func (service *{{ service|title }}) {{ model_name }}List(filterName string, filt
 			}
 		}
 		return nil, fmt.Errorf("Filter '%s' is invalid", filterName)
-	good:
 	}
+	good:
 
 	in := service.cinp.ListObjects("{{ url }}", reflect.TypeOf({{ model_name }}{}), filterName, filterValues, 50)
 	out := make(chan *{{ model_name }})
@@ -437,6 +431,8 @@ def render_model( service, prefix, model ):
                 'constant_map': model[ 'constant_map' ],
                 'id_field': id_field,
                 'not_allowed_verb_list': model[ 'not_allowed_verb_list' ],
+                'query_filter_fields': model[ 'query_filter_fields' ],
+                'query_sort_fields': model[ 'query_sort_fields' ],
                 'list_filter_map_names': [ '"{0}"'.format( i ) for i in model[ 'list_filter_map' ].keys() ],
                 'action_list': model[ 'action_list' ]
               }
