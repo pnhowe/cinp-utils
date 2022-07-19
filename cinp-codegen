@@ -15,7 +15,7 @@ oparser = OptionParser( description='CInP Auto Documentation', usage='usage %pro
 oparser.add_option( '-s', '--service', help='Service name' )
 oparser.add_option( '-p', '--proxy', help='HTTP Proxy', default=None )
 oparser.add_option( '-d', '--dir', help='Target Directory, default: "gen"', metavar='DIRNAME', default='gen' )
-oparser.add_option( '-l', '--language', help='Target Language, note: rst is reStructuredText for documentation, default: rst', default='rst', choices=[ 'rst', 'python', 'go', 'ts' ] )
+oparser.add_option( '-l', '--language', help='Target Language, note: rst is reStructuredText for documentation, default: rst', default='rst', choices=[ 'rst', 'python', 'go', 'ts', 'rust' ] )
 oparser.add_option( '-v', '--verbose', default=False, action='store_true' )
 
 
@@ -133,6 +133,10 @@ def main():
   elif options.language == 'ts':
     from cinp_utils.codegen_ts import ts_render_func
     render_func = ts_render_func
+
+  elif options.language == 'rust':
+    from cinp_utils.codegen_rust import rust_render_func
+    render_func = rust_render_func
 
   else:
     oparser.error( 'Unknown Language Type "{0}"'.format( options.language ) )

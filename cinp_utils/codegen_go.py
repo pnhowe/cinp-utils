@@ -358,7 +358,7 @@ register_template = env.from_string( """func register{{ prefix }}(cinp *cinp.CIn
 
 
 def service( wrk_dir, header_map ):
-  open( os.path.join( wrk_dir, 'serivce.go' ), 'w' ).write( service_template.render( prefix_list=prefix_list, **header_map ) )
+  open( os.path.join( wrk_dir, 'service.go' ), 'w' ).write( service_template.render( prefix_list=prefix_list, **header_map ) )
 
 
 def do_namespace( wrk_dir, header_map, prefix, namespace ):
