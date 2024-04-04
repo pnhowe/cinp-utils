@@ -160,9 +160,9 @@ service_template = env.from_string( """// Package {{ service }} - Automatically 
 package {{ service }}
 
 import (
-  "context"
+	"context"
 	"fmt"
-  "log/slog"
+	"log/slog"
 
 	cinp "github.com/cinp/go"
 )
@@ -203,7 +203,7 @@ func (s *{{ service|title }}) GetAPIVersion(ctx context.Context, uri string) (st
 	}
 
 	if t != "Namespace" {
-		return "", fmt.Errorf("Excpected a Namespace got '%s'", t)
+		return "", fmt.Errorf("excpected a Namespace got '%s'", t)
 	}
 
 	return r.APIVersion, nil
@@ -266,6 +266,22 @@ func (service *{{ service|title }}) {{ model_name }}Get(ctx context.Context, id 
 
 	return result, nil
 }
+
+// {{ model_name }}GetURI - Get function for Model {{ name }} vi URI
+func (service *{{ service|title }}) {{ model_name }}GetURI(ctx context.Context, uri string) (*{{ model_name }}, error) {
+  if ! strings.HasPrefix(uri, "{{url}}:") {
+		return nil, fmt.Errorf("URI is not for a '{{model_name}}'")
+  }
+
+	object, err := service.cinp.Get(ctx, uri)
+	if err != nil {
+		return nil, err
+	}
+	result := (*object).(*{{ model_name }})
+	result.cinp = service.cinp
+
+	return result, nil
+}
 {% endif %}{% if 'CREATE' not in not_allowed_verb_list %}
 // Create - Create function for Model {{ name }}
 func (object *{{ model_name }}) Create(ctx context.Context) (*{{ model_name }}, error) {
@@ -314,7 +330,7 @@ func (service *{{ service|title }}) {{ model_name }}List(ctx context.Context, fi
 				goto good
 			}
 		}
-		return nil, fmt.Errorf("Filter '%s' is invalid", filterName)
+		return nil, fmt.Errorf("filter '%s' is invalid", filterName)
 	}
 	good:
 
@@ -386,6 +402,13 @@ def do_namespace( wrk_dir, header_map, prefix, namespace ):
     include_list.append( '"context"' )
     include_list.append( '"reflect"' )
     include_list.append( 'cinp "github.com/cinp/go"' )
+
+    has_get = False
+    for model in namespace[ 'model_list' ]:
+      has_get |= 'GET' not in model[ 'not_allowed_verb_list' ] or model[ 'id_field_name' ] is not None
+
+    if has_get:
+      include_list.append( '"strings"' )
 
   value_map = {
                 'service': header_map[ 'service' ],
