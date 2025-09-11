@@ -169,7 +169,7 @@ import (
 
 // {{ service|title }} from {{ url }}
 type {{ service|title }} struct {
-	cinp *cinp.CInP
+	cinp cinp.CInPClient
 }
 
 // New{{ service|title }} creates and returns a new {{ service|title }}
@@ -239,7 +239,7 @@ model_template = env.from_string( """{% set model_name = prefix|title + name -%}
 */
 type {{ model_name }} struct {
 	cinp.BaseObject
-	cinp *cinp.CInP `json:"-"`{% for field in field_list %}
+	cinp cinp.CInPClient `json:"-"`{% for field in field_list %}
 	{{ field.name|goname }} *{{ field|gotype }} `json:"{{ field.name }},omitempty"`{% endfor %}
 }
 
@@ -284,23 +284,25 @@ func (service *{{ service|title }}) {{ model_name }}GetURI(ctx context.Context, 
 }
 {% endif %}{% if 'CREATE' not in not_allowed_verb_list %}
 // Create - Create function for Model {{ name }}
-func (object *{{ model_name }}) Create(ctx context.Context) (*{{ model_name }}, error) {
-  result, err := object.cinp.Create(ctx, "{{ url }}", object)
+// NOTE: the object will be updated with values from the server
+func (object *{{ model_name }}) Create(ctx context.Context) error {
+  err := object.cinp.Create(ctx, "{{ url }}", object)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return (*result).(*{{ model_name }}), nil
+	return nil
 }
 {% endif %}{% if 'UPDATE' not in not_allowed_verb_list and id_field %}
 // Update - Update function for Model {{ name }}
-func (object *{{ model_name }}) Update(ctx context.Context) (*{{ model_name }}, error) {
-  result, err := object.cinp.Update(ctx, object)
+// NOTE: the object will be updated with values from the server
+func (object *{{ model_name }}) Update(ctx context.Context) error {
+  err := object.cinp.Update(ctx, object)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return (*result).(*{{ model_name }}), nil
+	return nil
 }
 {% endif %}{% if 'DELETE' not in not_allowed_verb_list and id_field %}
 // Delete - Delete function for Model {{ name }}
@@ -356,11 +358,11 @@ func ({% if action.static %}service *{{ service|title }}{% else %}object *{{ mod
 {% for parm in action.paramater_list %}		"{{ parm.name }}": {{ parm.name|goname }},
 {% endfor %}	}{% if action.static %}
 	uri := "{{ action.url }}"{% else %}
-	_, _, _, ids, _, err := object.cinp.Split(object.GetURI())
+	_, _, _, ids, _, err := object.cinp.GetURI().Split(object.GetURI())
 	if err != nil {
 		return {% if action.return_type %}{{ action.return_type|goemptyval }}, {% endif %}err
 	}
-	uri, err := object.cinp.UpdateIDs("{{ action.url }}", ids)
+	uri, err := object.cinp.GetURI().UpdateIDs("{{ action.url }}", ids)
 	if err != nil {
 		return {% if action.return_type %}{{ action.return_type|goemptyval }}, {% endif %}err
 	}{% endif %}
@@ -375,7 +377,7 @@ func ({% if action.static %}service *{{ service|title }}{% else %}object *{{ mod
 }
 {% endfor %}{% endif %}""")  # noqa
 
-register_template = env.from_string( """func register{{ prefix }}(cinp *cinp.CInP) { {%- for model in model_list %}
+register_template = env.from_string( """func register{{ prefix }}(cinp cinp.CInPClient) { {%- for model in model_list %}
 	cinp.RegisterType("{{ model.url }}", reflect.TypeOf((*{{ prefix|title + model.name }})(nil)).Elem()){% endfor %}
 }
 
