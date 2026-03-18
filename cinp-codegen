@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
+import asyncio
 import sys
 import os
 import logging
 import urllib
-from datetime import datetime
+from datetime import datetime, UTC
 from optparse import OptionParser
 
 from cinp import client
@@ -19,9 +20,9 @@ oparser.add_option( '-l', '--language', help='Target Language, note: rst is reSt
 oparser.add_option( '-v', '--verbose', default=False, action='store_true' )
 
 
-def get_namespace( cinp, url ):
+async def get_namespace( cinp, url ):
   try:
-    item, type = cinp.describe( url )
+    item, type = await cinp.describe( url )
   except client.NotAuthorized:
     logging.warning( 'Describing Namespace "{0}" is not Authorized'.format( url ) )
     return
@@ -40,21 +41,21 @@ def get_namespace( cinp, url ):
            }
 
   for url in item[ 'models' ]:
-    model = get_model( cinp, url )
+    model = await get_model( cinp, url )
     if model is not None:
       result[ 'model_list' ].append( model )
 
   for url in item[ 'namespaces' ]:
-    namespace = get_namespace( cinp, url )
+    namespace = await get_namespace( cinp, url )
     if namespace is not None:
       result[ 'namespace_list' ].append( namespace )
 
   return result
 
 
-def get_model( cinp, url ):
+async def get_model( cinp, url ):
   try:
-    item, type = cinp.describe( url )
+    item, type = await cinp.describe( url )
   except client.NotAuthorized:
     logging.warning( 'Describing Model "{0}" is not Authorized'.format( url ) )
     return
@@ -78,16 +79,16 @@ def get_model( cinp, url ):
             }
 
   for url in item[ 'actions' ]:
-    tmp = get_action( cinp, url )
+    tmp = await get_action( cinp, url )
     if tmp is not None:
       result[ 'action_list' ].append( tmp )
 
   return result
 
 
-def get_action( cinp, url ):
+async def get_action( cinp, url ):
   try:
-    item, type = cinp.describe( url )
+    item, type = await cinp.describe( url )
   except client.NotAuthorized:
     logging.warning( 'Describing Action "{0}" is not Authorized'.format( url ) )
     return None
@@ -100,7 +101,7 @@ def get_action( cinp, url ):
   if return_type is not None and return_type[ 'type' ] is None:
     return_type = None
 
-  return( {
+  return ( {
              'name': item[ 'name' ],
              'url': url,
              'static': item[ 'static' ],
@@ -109,7 +110,7 @@ def get_action( cinp, url ):
             } )
 
 
-def main():
+async def main():
   ( options, args ) = oparser.parse_args()
 
   if len( args ) != 1:
@@ -162,14 +163,13 @@ def main():
     handler.setLevel( logging.INFO )
 
   try:
-    cinp = client.CInP( '{0}://{1}:{2}'.format( url.scheme, url.hostname, url.port if url.port is not None else 80 ), url.path, options.proxy )
+    async with client.CInP( '{0}://{1}:{2}'.format( url.scheme, url.hostname, url.port if url.port is not None else 80 ), url.path, options.proxy ) as cinp:
+      header_map = { 'url': args[0], 'service': options.service, 'root_path': url.path, 'timestamp': datetime.now( UTC ).isoformat() }
 
-    header_map = { 'url': args[0], 'service': options.service, 'root_path': url.path, 'timestamp': datetime.utcnow().isoformat() }
-
-    root = get_namespace( cinp, url.path )
-    if root is None:
-      logging.error( 'Unable to Describe root node' )
-      sys.exit( 1 )
+      root = await get_namespace( cinp, url.path )
+      if root is None:
+        logging.error( 'Unable to Describe root node' )
+        sys.exit( 1 )
 
     render_func( wrk_dir, header_map, root )
 
@@ -181,4 +181,4 @@ def main():
 
 
 if __name__ == '__main__':
-  main()
+  asyncio.run( main() )

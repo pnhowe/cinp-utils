@@ -106,9 +106,9 @@ def tsEmptyVal( field ):
   elif field[ 'type' ] == 'Model':
     try:
       if is_array:
-        return '[ new {0}() ]'.format( model_uri_lookup_map[ field[ 'uri' ] ] )
+        return 'undefined as [ {0} ]'.format( model_uri_lookup_map[ field[ 'uri' ] ] )
       else:
-        return 'new {0}()'.format( model_uri_lookup_map[ field[ 'uri' ] ] )
+        return 'undefined as {0}'.format( model_uri_lookup_map[ field[ 'uri' ] ] )
     except KeyError:
       raise Exception( 'Unable to find model at "{0}"'.format( field[ 'uri' ] ) )
 
@@ -228,6 +228,16 @@ export class {{ service }}
     return this.cinp.setHeader( name, value );
   }
 
+  clearHeader( name: string ): void
+  {
+    return this.cinp.clearHeader( name );
+  }
+
+  setServerErrorHandler( handler: ( message: string, trace: string ) => void ): void
+  {
+    this.cinp.server_error_handler = handler;
+  }
+
   raw( verb: string, uri: string, data: object, header_map: Record<string, string> ): Promise<unknown>
   {
     return this.cinp.raw( verb, uri, data, header_map );
@@ -321,8 +331,8 @@ model_methods_template = env.from_string( """
 {%- if not action.static %}{% set url = url + ':" + id + ":' %}{% endif %}
   async {{ model_name }}_call_{{ action.name }}({% if not action.static %} id: {{ id_field|tstype }} {% endif %}{{ func_in_parms }}): Promise<{% if action.return_type %}{{ action.return_type|tstype }}{% else %}void{% endif %}>
   {
-    {% if action.return_type %}const data = {% endif %}await this.cinp.callOne( "{{ url }}({{ action.name }})", {{ func_obj_parms }} );
-    {% if action.return_type %}return {{ action.return_type|tsreturn( 'data' ) }}{% else %}return{% endif %};
+    {% if action.return_type %}const _cinp_result_ = {% endif %}await this.cinp.callOne( "{{ url }}({{ action.name }})", {{ func_obj_parms }} );
+    {% if action.return_type %}return {{ action.return_type|tsreturn( '_cinp_result_' ) }}{% else %}return{% endif %};
   }
 
 {% endfor %}{% endif %}
@@ -342,7 +352,7 @@ export class {{ model_name }}
 {% for field in field_list %}{% if field.name != id_field.name %}
   public {{ field.name }}: {{ field|tstype }} | undefined = {{ field|tsinit }};{% endif %}{% endfor %}
 
-  constructor( service: {{ service }}, source?: ModelConstructorSource<{{ model_name }}> )
+  constructor( service: {{ service }}, source?: ModelConstructorSource<{{ model_name }}> {% if id_field and id_field.type == 'Model' %}| any {% endif %})
   {
     this._service = service;
     if( typeof source === 'object' )
@@ -357,7 +367,11 @@ export class {{ model_name }}
     {
       this.{{ id_field.name }} = {% if id_field.type == 'Integer' %}parseInt( source.split( ':' )[ 1 ] ){% elif id_field.type == 'Model' %}new {{ model_uri_lookup_map[ id_field.uri ] }}( service, source.split( ':' )[ 1 ] ){% else %}source.split( ':' )[ 1 ]{% endif %};
     }
+{%- if id_field.type == 'Model' %}
+    else if( source instanceof {{ id_field|tstype }} )
+{%- else %}
     else if( typeof source === '{{ id_field|tstype }}' )
+{%- endif %}
     {
       this.{{ id_field.name }} = source;
     }
