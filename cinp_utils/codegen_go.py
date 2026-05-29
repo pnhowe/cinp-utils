@@ -2,6 +2,8 @@ import os
 import re
 from jinja2 import Environment
 
+go_reserved_words = []
+
 # from https://github.com/golang/lint/blob/master/lint.go#L767
 commonInitialisms = ( 'acl', 'api', 'ascii', 'cpu', 'css', 'dns', 'eof', 'guid', 'html', 'http', 'https', 'id', 'ip', 'json', 'lhs', 'qps', 'ram', 'rhs', 'rpc', 'sla', 'smtp', 'sql', 'ssh', 'tcp', 'tls', 'ttl', 'udp', 'ui', 'uid', 'uuid', 'uri', 'url', 'utf8', 'vm', 'xml', 'xmpp', 'xsrf', 'xss' )
 
@@ -352,10 +354,10 @@ func (service *{{ service|title }}) {{ model_name }}List(ctx context.Context, fi
 // {{ funcname }} calls {{ action.name }}{% if action.doc %}
 /*
 {{ action.doc }}
-*/{% endif %}{% set parm_list = [] %}{% for parm in action.paramater_list %}{{ parm_list.append( parm.name|goname + " " + parm|gotype )|default( '', True ) }}{% endfor %}
+*/{% endif %}{% set parm_list = [] %}{% for parm in action.parameter_list %}{{ parm_list.append( parm.name|goname + " " + parm|gotype )|default( '', True ) }}{% endfor %}
 func ({% if action.static %}service *{{ service|title }}{% else %}object *{{ model_name }}{% endif %}) {{ funcname }}(ctx context.Context, {{ parm_list|join(", ") }}) ({% if action.return_type %}{{ action.return_type|gotype }}, {% endif %}error) {
 	args := map[string]interface{}{
-{% for parm in action.paramater_list %}		"{{ parm.name }}": {{ parm.name|goname }},
+{% for parm in action.parameter_list %}		"{{ parm.name }}": {{ parm.name|goname }},
 {% endfor %}	}{% if action.static %}
 	uri := "{{ action.url }}"{% else %}
 	_, _, _, ids, _, err := object.cinp.GetURI().Split(object.GetURI())

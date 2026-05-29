@@ -120,24 +120,19 @@ async def main():
     oparser.error( 'Service name is required' )
 
   elif options.language == 'rst':
-    from cinp_utils.codegen_rst import rst_render_func
-    render_func = rst_render_func
+    from cinp_utils.codegen_rst import rst_render_func as render_func, rst_reserved_words as reserved_words
 
   elif options.language == 'python':
-    from cinp_utils.codegen_python import python_render_func
-    render_func = python_render_func
+    from cinp_utils.codegen_python import python_render_func as render_func, python_reserved_words as reserved_words
 
   elif options.language == 'go':
-    from cinp_utils.codegen_go import go_render_func
-    render_func = go_render_func
+    from cinp_utils.codegen_go import go_render_func as render_func, go_reserved_words as reserved_words
 
   elif options.language == 'ts':
-    from cinp_utils.codegen_ts import ts_render_func
-    render_func = ts_render_func
+    from cinp_utils.codegen_ts import ts_render_func as render_func, ts_reserved_words as reserved_words
 
   elif options.language == 'rust':
-    from cinp_utils.codegen_rust import rust_render_func
-    render_func = rust_render_func
+    from cinp_utils.codegen_rust import rust_render_func as render_func, rust_reserved_words as reserved_words
 
   else:
     oparser.error( 'Unknown Language Type "{0}"'.format( options.language ) )

@@ -1,6 +1,7 @@
 import os
 from jinja2 import Environment
 
+ts_reserved_words = [ 'implements', 'interface', 'let', 'package', 'private', 'protected', 'public', 'static', 'yield', 'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do', 'else', 'export', 'extends', 'false', 'finally', 'for', 'function', 'if', 'import', 'in', 'instanceof', 'new', 'null', 'return', 'super', 'switch', 'this', 'throw', 'true', 'try', 'typeof', 'var', 'void', 'while', 'with' ]
 
 class_buff = ''
 model_uri_lookup_map = {}
@@ -106,9 +107,9 @@ def tsEmptyVal( field ):
   elif field[ 'type' ] == 'Model':
     try:
       if is_array:
-        return 'undefined as [ {0} ]'.format( model_uri_lookup_map[ field[ 'uri' ] ] )
+        return 'undefined as unknown as [ {0} ]'.format( model_uri_lookup_map[ field[ 'uri' ] ] )
       else:
-        return 'undefined as {0}'.format( model_uri_lookup_map[ field[ 'uri' ] ] )
+        return 'undefined as unknown as {0}'.format( model_uri_lookup_map[ field[ 'uri' ] ] )
     except KeyError:
       raise Exception( 'Unable to find model at "{0}"'.format( field[ 'uri' ] ) )
 
@@ -142,21 +143,21 @@ def tsReturn( field, name ):
   return '( {0} as {1} )'.format( name, tsType( field ) )
 
 
-def tsParamaters( paramater_list ):
-  if not paramater_list:
+def tsParameters( parameter_list ):
+  if not parameter_list:
     return '', '{}', '', ''
 
-  func_in_parms = ' ' + ', '.join( [ '{0}: {1}'.format( i[ 'name' ], tsType( i ) ) for i in paramater_list ] ) + ' '
-  func_obj_parms = '{ ' + ', '.join( [ '"{0}": {1}'.format( i[ 'name' ], tsParmValue( i ) ) for i in paramater_list ] ) + ' }'
-  func_out_parms = ' ' + ', '.join( [ i[ 'name' ] for i in paramater_list ] ) + ' '
-  inline_type = '{ ' + ', '.join( [ '{0}: {1}'.format( i[ 'name' ], tsType( i ) ) for i in paramater_list ] ) + ' }'
+  func_in_parms = ' ' + ', '.join( [ '{0}: {1}'.format( i[ 'name' ], tsType( i ) ) for i in parameter_list ] ) + ' '
+  func_obj_parms = '{ ' + ', '.join( [ '"{0}": {1}'.format( i[ 'name' ], tsParmValue( i ) ) for i in parameter_list ] ) + ' }'
+  func_out_parms = ' ' + ', '.join( [ i[ 'name' ] for i in parameter_list ] ) + ' '
+  inline_type = '{ ' + ', '.join( [ '{0}: {1}'.format( i[ 'name' ], tsType( i ) ) for i in parameter_list ] ) + ' }'
 
   return func_in_parms, func_obj_parms, func_out_parms, inline_type
 
 
 env = Environment( extensions=[ 'jinja2.ext.do' ] )
 env.filters[ 'tstype' ] = tsType
-env.filters[ 'tsParamaters' ] = tsParamaters
+env.filters[ 'tsParameters' ] = tsParameters
 env.filters[ 'tsinit' ] = tsInit
 env.filters[ 'tsemptyval' ] = tsEmptyVal
 env.filters[ 'tsreturn' ] = tsReturn
@@ -326,7 +327,7 @@ model_methods_template = env.from_string( """
   }
 {% endif %}{% if 'CALL' not in not_allowed_verb_list %}
 {%- for action in action_list %}
-{%- set func_in_parms, func_obj_parms, _, _ = action.paramater_list|tsParamaters %}
+{%- set func_in_parms, func_obj_parms, _, _ = action.parameter_list|tsParameters %}
 {%- if func_in_parms and not action.static %}{% set func_in_parms = ', ' + func_in_parms %}{% endif %}
 {%- if not action.static %}{% set url = url + ':" + id + ":' %}{% endif %}
   async {{ model_name }}_call_{{ action.name }}({% if not action.static %} id: {{ id_field|tstype }} {% endif %}{{ func_in_parms }}): Promise<{% if action.return_type %}{{ action.return_type|tstype }}{% else %}void{% endif %}>
@@ -395,7 +396,7 @@ export class {{ model_name }}
 {%- if field.type == 'Model' %}
 {%- if field.is_array %}
     if( data.{{ field.name }} !== undefined )
-      this.{{ field.name }} = data.{{ field.name }}.map( ( uri ) => { return new {{ model_uri_lookup_map[ field.uri ] }}( this._service, uri ) } );
+      this.{{ field.name }} = data.{{ field.name }}.map( ( uri: string ) => { return new {{ model_uri_lookup_map[ field.uri ] }}( this._service, uri ) } );
 {%- else %}
     this.{{ field.name }} = data.{{ field.name }} !== null ? new {{ model_uri_lookup_map[ field.uri ] }}( this._service, data.{{ field.name }} ) : undefined;
 {%- endif %}
@@ -436,7 +437,7 @@ export class {{ model_name }}
   }
 {% endif %}{% if 'CALL' not in not_allowed_verb_list %}
 {% for action in action_list %}
-{%- set func_in_parms, _, func_out_parms, _ = action.paramater_list|tsParamaters %}
+{%- set func_in_parms, _, func_out_parms, _ = action.parameter_list|tsParameters %}
 {%- if func_in_parms and not action.static %}{% set func_out_parms = ', ' + func_out_parms %}{% endif %}
 {%- if not action.static %}{% set url = url + ':" + id + ":' %}{% endif %}
   async _call_{{ action.name }}( {{ func_in_parms }} ): Promise<{% if action.return_type %}{{ action.return_type|tstype }}{% else %}void{% endif %}>
@@ -462,7 +463,7 @@ export namespace {{ model_name }}
 {% if 'LIST' not in not_allowed_verb_list %}
 {%- set filter_name_list = [] %}
 {%- for filter in list_filter_map %}
-{%- set func_in_parms, _, _, _ = list_filter_map[ filter ]|tsParamaters %}
+{%- set func_in_parms, _, _, _ = list_filter_map[ filter ]|tsParameters %}
   export class _ListFilter_{{ filter }} implements ListFilter
   {
 {%- for field in list_filter_map[ filter ] %}
@@ -479,7 +480,7 @@ export namespace {{ model_name }}
   };
 
 {% endfor %}{% if query_filter_fields or query_sort_fields %}
-{%- set _, _, func_out_parms, inline_type = query_filter_fields|tsParamaters %}
+{%- set _, _, func_out_parms, inline_type = query_filter_fields|tsParameters %}
   export class _QueryFilter implements QueryFilter
   {
 {%- for field in query_filter_fields %}
