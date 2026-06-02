@@ -166,7 +166,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	cinp "github.com/cinp/go"
+	cinp "github.com/cinp/go/v2"
 )
 
 // {{ service|title }} from {{ url }}
@@ -405,7 +405,7 @@ def do_namespace( wrk_dir, header_map, prefix, namespace ):
   if namespace[ 'model_list' ]:
     include_list.append( '"context"' )
     include_list.append( '"reflect"' )
-    include_list.append( 'cinp "github.com/cinp/go"' )
+    include_list.append( 'cinp "github.com/cinp/go/v2"' )
 
     has_get = False
     for model in namespace[ 'model_list' ]:
