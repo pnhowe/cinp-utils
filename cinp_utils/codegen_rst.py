@@ -1,6 +1,8 @@
 import os
 from jinja2 import Environment
 
+rst_reserved_words = []
+
 
 def titleize( word, char='=' ):
   return char * len( word )
@@ -29,15 +31,15 @@ def table( data_list, header_list ):
 
 
 def parm_extract( parm_list ):
-  return [ ( parm[ 'name' ], parm[ 'type' ], str( parm.get( 'length', '' ) ), 'Yes' if parm.get( 'is_array', False ) else ' ', str( parm.get( 'choice_list', '' ) ), str( parm.get( 'allowed_scheme_list', '' ) ), parm.get( 'uri', '' ), parm.get( 'doc', '' ) ) for parm in parm_list ]
+  return [ ( parm[ 'name' ], parm[ 'type' ], str( parm.get( 'length', '' ) ), 'Yes' if parm.get( 'is_array', False ) else ' ', ', '.join( parm.get( 'choices', '' ) ), ', '.join( parm.get( 'allowed_schemes', '' ) ), parm.get( 'uri', '' ), parm.get( 'doc', '' ) ) for parm in parm_list ]
 
 
 def field_extract( field_list ):
-  return [ ( field[ 'name' ], field[ 'type' ], str( field.get( 'length', '' ) ), '' if field.get( 'default', '' ) is None else str( field.get( 'default', '' ) ), 'Yes' if field.get( 'is_array', False ) else ' ', str( field.get( 'choice_list', '' ) ), str( field.get( 'allowed_scheme_list', '' ) ), field.get( 'uri', '' ), field.get( 'doc', '' ) ) for field in field_list ]
+  return [ ( field[ 'name' ], field[ 'type' ], str( field.get( 'length', '' ) ), '' if field.get( 'default', '' ) is None else str( field.get( 'default', '' ) ), 'Yes' if field.get( 'is_array', False ) else ' ', ', '.join( field.get( 'choices', '' ) ), ', '.join( field.get( 'allowed_schemes', '' ) ), field.get( 'uri', '' ), field.get( 'doc', '' ) ) for field in field_list ]
 
 
 def return_type_extract( return_type ):
-  return [ ( return_type[ 'type' ], str( return_type.get( 'length', '' ) ), '' if return_type.get( 'default', '' ) is None else str( return_type.get( 'default', '' ) ), 'Yes' if return_type.get( 'is_array', False ) else ' ', str( return_type.get( 'choice_list', '' ) ), str( return_type.get( 'allowed_scheme_list', '' ) ), return_type.get( 'uri', '' ), return_type.get( 'doc', '' ) ) ]
+  return [ ( return_type[ 'type' ], str( return_type.get( 'length', '' ) ), '' if return_type.get( 'default', '' ) is None else str( return_type.get( 'default', '' ) ), 'Yes' if return_type.get( 'is_array', False ) else ' ', ', '.join( return_type.get( 'choices', '' ) ), ', '.join( return_type.get( 'allowed_schemes', '' ) ), return_type.get( 'uri', '' ), return_type.get( 'doc', '' ) ) ]
 
 
 env = Environment()
@@ -92,11 +94,11 @@ List Filters
 {% for key, item in list_filter_map.items() %}
 {{ key }}
 {{ key|titleize( '^' ) }}
-{% if item %}{{ item|parm_extract|table( [ 'Name', 'Type', 'Length', 'Array', 'Choice List', 'Schema List', 'Model', 'Doc' ] ) }}{% endif %}{% endfor %}
+{% if item %}{{ item|parm_extract|table( [ 'Name', 'Type', 'Length', 'Array', 'Choices', 'Schemas', 'Model', 'Doc' ] ) }}{% endif %}{% endfor %}
 {% endif %}{% if field_list %}
 Fields
 ~~~~~~
-{{ field_list|field_extract|table( [ 'Name', 'Type', 'Length', 'Default', 'Array', 'Choice List', 'Schema List', 'Model', 'Doc' ] ) }}{% endif %}
+{{ field_list|field_extract|table( [ 'Name', 'Type', 'Length', 'Default', 'Array', 'Choices', 'Schemas', 'Model', 'Doc' ] ) }}{% endif %}
 """ )
 
 action_template = env.from_string( """Action - {{ name }}
@@ -112,10 +114,10 @@ Static: *{% if static %}Yes{% else %}No{% endif %}*
 {% endif %}{% if return_type %}
 Return Type
 ~~~~~~~~~~~
-{{ return_type|return_type_extract|table( [ 'Type', 'Length', 'Array', 'Choice List', 'Schema List', 'Model', 'Doc' ] ) }}{% endif %}{% if paramater_list %}
+{{ return_type|return_type_extract|table( [ 'Type', 'Length', 'Array', 'Choices', 'Schemas', 'Model', 'Doc' ] ) }}{% endif %}{% if parameter_list %}
 Parameters
 ~~~~~~~~~~
-{{ paramater_list|parm_extract|table( [ 'Name', 'Type', 'Length', 'Array', 'Choice List', 'Schema List', 'Model', 'Doc' ] ) }}{% endif %}
+{{ parameter_list|parm_extract|table( [ 'Name', 'Type', 'Length', 'Array', 'Choices', 'Schemas', 'Model', 'Doc' ] ) }}{% endif %}
 
 """ )
 
@@ -140,7 +142,7 @@ def write_model( fp, model ):
                   'static': action[ 'static' ],
                   'doc': action.get( 'doc', '' ).strip().replace( '\n', '\n  ' ),
                   'return_type': action.get( 'return_type', {} ),
-                  'paramater_list': action.get( 'paramater_list', [] )
+                  'parameter_list': action.get( 'parameter_list', [] )
                 }
     fp.write( action_template.render( **value_map ) )
 
